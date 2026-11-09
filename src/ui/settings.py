@@ -4,39 +4,13 @@ Permite ao usuário visualizar e alterar o atalho de Push-to-Talk interativament
 escolher o idioma padrão e manter o aplicativo rodando silenciosamente em segundo plano.
 """
 
-import ctypes
-import os
-import sys
-from pathlib import Path
 from typing import Optional
 
-# Garante que a raiz do projeto esteja no sys.path
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
-
-# Garante DISPLAY no Linux X11
-if "DISPLAY" not in os.environ and sys.platform.startswith("linux"):
-    os.environ["DISPLAY"] = ":0"
-
-# Pré-carregamento do libxcb-cursor para Qt 6.5+ no Linux
-for candidate in [
-    PROJECT_ROOT / ".venv/lib/python3.12/site-packages/PySide6/Qt/lib/libxcb-cursor.so.0",
-    Path.home() / ".local/lib/libxcb-cursor.so.0",
-]:
-    if candidate.exists():
-        try:
-            ctypes.CDLL(str(candidate))
-            break
-        except Exception:
-            pass
-
-from PySide6.QtCore import QObject, QPointF, QRectF, Qt, Signal
+from PySide6.QtCore import QObject, QRectF, Qt, Signal
 from PySide6.QtGui import (
     QAction,
     QBrush,
     QColor,
-    QFont,
     QIcon,
     QKeyEvent,
     QPainter,
@@ -428,7 +402,6 @@ class SystemTrayManager(QObject):
         self._setup_tray()
 
     def _setup_tray(self) -> None:
-        # Configura o ícone e tooltip
         self.tray_icon.setIcon(create_dynamic_tray_icon())
         self.tray_icon.setToolTip("Wispr Clone — Ditado com IA")
 
@@ -500,33 +473,3 @@ class SystemTrayManager(QObject):
     def show(self) -> None:
         """Exibe o ícone na bandeja."""
         self.tray_icon.show()
-
-
-if __name__ == "__main__":
-    from rich.console import Console
-    from rich.panel import Panel
-
-    console = Console()
-    console.print(
-        Panel.fit(
-            "[bold cyan]Teste da Janela de Configurações e System Tray (Task 1.6)[/bold cyan]\n"
-            "1. Um ícone circular azul com um microfone aparecerá na bandeja ao lado do relógio.\n"
-            "2. A janela de configurações abrirá em seguida.\n"
-            "3. Clique em [bold green]'Alterar Tecla'[/bold green] e aperte uma nova tecla (ex: [bold yellow]F8[/bold yellow]).\n"
-            "4. Clique em Salvar e verifique se o [bold]config.json[/bold] foi atualizado!\n"
-            "5. Para sair, clique com botão direito no ícone da bandeja e selecione [bold red]'Sair'[/bold red].",
-            title="Wispr Clone - Settings & Tray",
-        )
-    )
-
-    app = QApplication.instance() or QApplication(sys.argv)
-    # Impede que o app feche quando a janela de configurações for fechada no X
-    app.setQuitOnLastWindowClosed(False)
-
-    settings = SettingsWindow()
-    tray = SystemTrayManager(settings_window=settings)
-    tray.show()
-
-    settings.show()
-
-    sys.exit(app.exec())
