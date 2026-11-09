@@ -5,16 +5,8 @@ calcula RMS para feedback visual de volume e produz buffers WAV em memória RAM 
 """
 
 import io
-import sys
-import time
 import wave
-from pathlib import Path
 from typing import Callable, Optional, Tuple
-
-# Garante que a raiz do projeto esteja no sys.path
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
 
 import numpy as np
 import sounddevice as sd
@@ -68,7 +60,6 @@ class AudioRecorder:
 
         # Cálculo de RMS (Root Mean Square) para medir o volume atual
         if self.on_volume_change is not None and len(indata) > 0:
-            # Converte para float32 para evitar overflow no cálculo quadrático
             audio_data = indata.astype(np.float32)
             rms = float(np.sqrt(np.mean(audio_data**2)))
 
@@ -77,7 +68,6 @@ class AudioRecorder:
             try:
                 self.on_volume_change(normalized_volume)
             except Exception:
-                # Evita que erros no callback da UI quebrem a thread de áudio
                 pass
 
     def start_recording(self) -> None:
@@ -101,7 +91,7 @@ class AudioRecorder:
 
         Returns:
             Tuple contendo:
-            - buffer: io.BytesIO com o áudio formatado em WAV (ou None se for muito curto).
+            - buffer: io.BytesIO com o áudio formatado em WAV (ou None se for muito curto/silêncio).
             - duration: Duração total em segundos.
         """
         if not self.is_recording:
@@ -150,55 +140,3 @@ class AudioRecorder:
         wav_buffer.seek(0)
 
         return wav_buffer, duration
-
-
-if __name__ == "__main__":
-    from rich.console import Console
-    from rich.panel import Panel
-
-    console = Console()
-    console.print(
-        Panel.fit(
-            "[bold cyan]Teste Isolado do Gravador de Áudio (Task 1.2)[/bold cyan]\n"
-            "Gravando por [bold yellow]3 segundos[/bold yellow] com barra de volume em tempo real...",
-            title="Wispr Clone - Audio Module",
-        )
-    )
-
-    current_volume = [0.0]
-
-    def on_vol(vol: float) -> None:
-        current_volume[0] = vol
-
-    recorder = AudioRecorder(sample_rate=16000, channels=1, on_volume_change=on_vol)
-    recorder.start_recording()
-
-    start_time = time.time()
-    while time.time() - start_time < 3.0:
-        vol = current_volume[0]
-        bar_len = int(vol * 30)
-        bar = "█" * bar_len + "░" * (30 - bar_len)
-        percentage = int(vol * 100)
-        print(f"\r🎤 Gravando: [{bar}] {percentage:3d}%", end="", flush=True)
-        time.sleep(0.05)
-
-    buffer, duration = recorder.stop_recording()
-    print("\n")
-
-    if buffer is not None:
-        console.print(f"[bold green]✓ Gravação concluída com sucesso![/bold green]")
-        console.print(f"  - Duração: [cyan]{duration:.2f}s[/cyan]")
-        console.print(f"  - Tamanho do buffer WAV: [cyan]{len(buffer.getvalue())} bytes[/cyan]")
-        console.print(f"  - Nome do arquivo virtual: [cyan]{buffer.name}[/cyan]")
-    else:
-        console.print(f"[yellow]Gravação descartada (muito curta: {duration:.2f}s)[/yellow]")
-
-    # Teste de descarte de clique curto
-    console.print("\n[bold cyan]Testando descarte de clique curto (< 0.3s):[/bold cyan]")
-    recorder.start_recording()
-    time.sleep(0.1)  # 100ms
-    short_buf, short_dur = recorder.stop_recording()
-    if short_buf is None:
-        console.print(f"[bold green]✓ Clique rápido de {short_dur:.2f}s descartado corretamente (retornou None).[/bold green]")
-    else:
-        console.print(f"[bold red]✗ Falha no descarte de clique rápido.[/bold red]")
