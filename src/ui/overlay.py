@@ -4,37 +4,11 @@ Projetado especificamente para o Linux X11 com as flags WindowDoesNotAcceptFocus
 e WA_ShowWithoutActivating para nunca roubar o foco da janela ativa do usuário.
 """
 
-import ctypes
-import os
-import sys
-import time
-from pathlib import Path
 from typing import Optional
-
-# Garante que a raiz do projeto esteja no sys.path
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
-
-# Garante DISPLAY no Linux X11
-if "DISPLAY" not in os.environ and sys.platform.startswith("linux"):
-    os.environ["DISPLAY"] = ":0"
-
-# Pré-carregamento do libxcb-cursor para Qt 6.5+ no Linux
-for candidate in [
-    PROJECT_ROOT / ".venv/lib/python3.12/site-packages/PySide6/Qt/lib/libxcb-cursor.so.0",
-    Path.home() / ".local/lib/libxcb-cursor.so.0",
-]:
-    if candidate.exists():
-        try:
-            ctypes.CDLL(str(candidate))
-            break
-        except Exception:
-            pass
 
 from PySide6.QtCore import QPointF, QRectF, Qt, QTimer, Signal
 from PySide6.QtGui import QBrush, QColor, QFont, QGuiApplication, QPainter, QPen
-from PySide6.QtWidgets import QApplication, QWidget
+from PySide6.QtWidgets import QWidget
 
 
 class RecordingOverlay(QWidget):
@@ -206,53 +180,5 @@ class RecordingOverlay(QWidget):
         )
 
 
-# Alias para manter compatibilidade com o esqueleto anterior
+# Alias para manter compatibilidade
 OverlayWidget = RecordingOverlay
-
-
-if __name__ == "__main__":
-    from rich.console import Console
-    from rich.panel import Panel
-
-    console = Console()
-    console.print(
-        Panel.fit(
-            "[bold cyan]Teste Visual da Pílula Flutuante (Task 1.5)[/bold cyan]\n"
-            "1. A pílula aparecerá centralizada na parte inferior da sua tela.\n"
-            "2. [bold green]Teste de Foco:[/bold green] Clique em qualquer aplicativo e continue digitando.\n"
-            "   A pílula [bold yellow]NÃO VAI ROUBAR O CURSOR[/bold yellow] em nenhum momento!\n"
-            "3. O teste passará pelos estados: [red]Ouvindo[/red] -> [blue]Transcrevendo[/blue] -> Ocultar.",
-            title="Wispr Clone - UI Overlay Module",
-        )
-    )
-
-    app = QApplication.instance() or QApplication(sys.argv)
-    overlay = RecordingOverlay()
-
-    # Demonstração cronometrada dos estados
-    overlay.show_recording()
-
-    # Simulação da animação de volume sonoro
-    anim_timer = QTimer()
-    step = [0]
-
-    def _animate():
-        step[0] += 1
-        import math
-
-        # Onda senoidal suave simulando voz humana oscilando
-        sim_volume = abs(math.sin(step[0] * 0.2)) * 0.85
-        overlay.update_volume(sim_volume)
-
-        if step[0] == 40:  # ~2 segundos gravando
-            overlay.show_processing()
-        elif step[0] == 70:  # ~1.5 segundos transcrevendo
-            overlay.hide_overlay()
-            anim_timer.stop()
-            console.print("[bold green]✓ Teste visual concluído com sucesso![/bold green]")
-            QTimer.singleShot(200, app.quit)
-
-    anim_timer.timeout.connect(_animate)
-    anim_timer.start(50)  # 20 FPS para animação fluida
-
-    sys.exit(app.exec())
