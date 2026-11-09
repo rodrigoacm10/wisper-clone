@@ -1,0 +1,8 @@
+{
+  "hotkey": "<f9>",
+  "language": "pt",
+  "model": "whisper-large-v3-turbo",
+  "sample_rate": 16000,
+  "channels": 1
+}
+
