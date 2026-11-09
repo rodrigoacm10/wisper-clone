@@ -6,21 +6,9 @@ o atalho Ctrl+V diretamente no nível de hardware do X11 (aceito por navegadores
 editores Electron/VS Code e aplicativos GTK/Qt).
 """
 
-import os
-import sys
 import threading
 import time
-from pathlib import Path
 from typing import Callable, Optional, Set, Union
-
-# Garante que a raiz do projeto esteja no sys.path
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
-
-# Garante DISPLAY no Linux X11 caso não esteja definido
-if "DISPLAY" not in os.environ and sys.platform.startswith("linux"):
-    os.environ["DISPLAY"] = ":0"
 
 import pyperclip
 from pynput import keyboard
@@ -35,7 +23,6 @@ def _normalize_key(key: Union[keyboard.Key, keyboard.KeyCode, None]) -> Optional
 
     if isinstance(key, keyboard.Key):
         name = key.name.lower()
-        # Agrupa variantes esquerda/direita de modificadores comuns
         if name in ("ctrl_l", "ctrl_r"):
             return "ctrl"
         if name in ("alt_l", "alt_r", "alt_gr"):
@@ -98,7 +85,7 @@ def _simulate_paste_xtest() -> bool:
         disp.sync()
         disp.close()
         return True
-    except Exception as e:
+    except Exception:
         return False
 
 
@@ -244,46 +231,3 @@ class KeyboardManager:
 
         # Dispara em thread separada para não bloquear a thread do listener do pynput
         threading.Thread(target=_async_paste, daemon=True).start()
-
-
-if __name__ == "__main__":
-    from rich.console import Console
-    from rich.panel import Panel
-
-    console = Console()
-    console.print(
-        Panel.fit(
-            "[bold cyan]Teste do KeyboardManager (Task 1.4 - Hardware XTest Mode)[/bold cyan]\n"
-            f"Atalho configurado: [bold yellow]{config_manager.get('hotkey', '<f9>')}[/bold yellow] (Push-to-Talk)\n\n"
-            "1. Deixe o cursor piscando em qualquer janela (Firefox, VS Code, Bloco de Notas).\n"
-            "2. Pressione e segure o atalho; solte para colar automaticamente.\n"
-            "3. Pressione [bold red]Ctrl+C[/bold red] no terminal para encerrar.",
-            title="Wispr Clone - Input Module",
-        )
-    )
-
-    press_count = 0
-    release_count = 0
-
-    def on_press() -> None:
-        global press_count
-        press_count += 1
-        console.print(f"[bold green]▶ [Pressionou][/bold green] Iniciou gravação (Disparo #{press_count})")
-
-    def on_release() -> None:
-        global release_count
-        release_count += 1
-        console.print(f"[bold yellow]■ [Soltou][/bold yellow] Parou gravação (Disparo #{release_count})")
-        test_text = "Ação de transcrição concluída com sucesso! É ótimo aprender IA."
-        console.print(f"[dim]Colando texto via Ctrl+V de hardware (XTest): '{test_text}'[/dim]")
-        km.paste_text(test_text)
-
-    km = KeyboardManager(on_press=on_press, on_release=on_release)
-    km.start()
-
-    try:
-        while True:
-            time.sleep(0.2)
-    except KeyboardInterrupt:
-        km.stop()
-        console.print("\n[bold red]Listener encerrado com sucesso.[/bold red]")
