@@ -5,9 +5,16 @@ calcula RMS para feedback visual de volume e produz buffers WAV em memória RAM 
 """
 
 import io
+import sys
 import time
 import wave
+from pathlib import Path
 from typing import Callable, Optional, Tuple
+
+# Garante que a raiz do projeto esteja no sys.path
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 import numpy as np
 import sounddevice as sd
@@ -21,6 +28,7 @@ class AudioRecorder:
         sample_rate: int = 16000,
         channels: int = 1,
         min_duration_seconds: float = 0.3,
+        min_rms_threshold: float = 100.0,
         on_volume_change: Optional[Callable[[float], None]] = None,
     ) -> None:
         """Inicializa o gravador com os parâmetros ideais para modelos Whisper.
@@ -29,14 +37,18 @@ class AudioRecorder:
             sample_rate: Taxa de amostragem em Hz (padrão 16000 Hz / 16 kHz).
             channels: Número de canais de áudio (1 = Mono).
             min_duration_seconds: Duração mínima em segundos para aceitar a gravação.
+            min_rms_threshold: Volume médio mínimo (RMS) para evitar envio de áudios em silêncio.
             on_volume_change: Callback opcional que recebe o volume normalizado (0.0 a 1.0).
         """
         self.sample_rate = sample_rate
         self.channels = channels
         self.min_duration_seconds = min_duration_seconds
+        self.min_rms_threshold = min_rms_threshold
         self.on_volume_change = on_volume_change
 
         self.is_recording = False
+        self.last_discard_reason: Optional[str] = None  # "too_short", "silence" ou None
+        self.last_rms: float = 0.0
         self._frames: list[np.ndarray] = []
         self._stream: Optional[sd.InputStream] = None
 
@@ -110,9 +122,20 @@ class AudioRecorder:
         total_samples = len(audio_data)
         duration = float(total_samples) / float(self.sample_rate)
 
-        # Descarte de cliques acidentais rápidos (< min_duration_seconds)
+        # 1. Descarte de cliques acidentais rápidos (< min_duration_seconds)
         if duration < self.min_duration_seconds:
+            self.last_discard_reason = "too_short"
             return None, duration
+
+        # 2. Descarte de silêncio absoluto / ruído ambiente desprezível (RMS < min_rms_threshold)
+        total_rms = float(np.sqrt(np.mean(audio_data.astype(np.float32) ** 2)))
+        self.last_rms = total_rms
+
+        if total_rms < self.min_rms_threshold:
+            self.last_discard_reason = "silence"
+            return None, duration
+
+        self.last_discard_reason = None
 
         # Empacotamento do formato WAV em memória RAM (BytesIO)
         wav_buffer = io.BytesIO()
