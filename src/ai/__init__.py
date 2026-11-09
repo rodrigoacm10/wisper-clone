@@ -1,6 +1,5 @@
 """Módulo de Inteligência Artificial e Transcrição."""
 
-from .transcriber import Transcriber
+from .transcriber import GroqTranscriber, Transcriber, TranscriptionResult
 
-__all__ = ["Transcriber"]
-
+__all__ = ["GroqTranscriber", "Transcriber", "TranscriptionResult"]
