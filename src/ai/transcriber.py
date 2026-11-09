@@ -6,16 +6,9 @@ whisper-large-v3-turbo, retornando o texto transcrito com métricas de latência
 
 import io
 import os
-import sys
 import time
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Optional
-
-# Garante que a raiz do projeto esteja no sys.path mesmo ao executar diretamente
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
 
 from groq import AuthenticationError, Groq, GroqError
 
@@ -150,49 +143,3 @@ class GroqTranscriber:
 
 # Alias para compatibilidade retroativa
 Transcriber = GroqTranscriber
-
-
-if __name__ == "__main__":
-    from rich.console import Console
-    from rich.panel import Panel
-    from src.audio.recorder import AudioRecorder
-
-    console = Console()
-    console.print(
-        Panel.fit(
-            "[bold cyan]Teste Integrado: Captura de Áudio + Transcrição IA (Task 1.3)[/bold cyan]\n"
-            "Modelo: [bold yellow]whisper-large-v3-turbo[/bold yellow] via Groq Cloud API",
-            title="Wispr Clone - AI Module",
-        )
-    )
-
-    try:
-        transcriber = GroqTranscriber()
-        console.print("[green]✓[/green] Cliente Groq inicializado com sucesso!")
-    except ValueError as err:
-        console.print(f"[bold red]✗ Erro de Configuração:[/bold red] {err}")
-        exit(1)
-
-    console.print("\n[bold yellow]Prepare-se para falar no microfone...[/bold yellow]")
-    console.print("Gravando por [bold cyan]4 segundos[/bold cyan]...")
-
-    recorder = AudioRecorder(sample_rate=16000, channels=1)
-    recorder.start_recording()
-
-    time.sleep(4.0)
-
-    audio_buf, duration = recorder.stop_recording()
-    console.print(f"[green]✓[/green] Gravação finalizada: [cyan]{duration:.2f}s[/cyan]")
-
-    if audio_buf is not None:
-        console.print("[yellow]Enviando para a API da Groq (transcrevendo...)[/yellow]")
-        try:
-            result = transcriber.transcribe(audio_buf, audio_duration_s=duration)
-            console.print("\n" + "=" * 50)
-            console.print(f"[bold green]Texto Transcrito:[/bold green] \"[bold white]{result.text}[/bold white]\"")
-            console.print(f"[dim]Latência da API: {result.latency_ms:.1f}ms | Duração do Áudio: {result.audio_duration_s:.2f}s | Modelo: {result.model}[/dim]")
-            console.print("=" * 50 + "\n")
-        except GroqError as e:
-            console.print(f"[bold red]✗ Erro na transcrição:[/bold red] {e}")
-    else:
-        console.print("[red]✗ Gravação descartada (muito curta).[/red]")
