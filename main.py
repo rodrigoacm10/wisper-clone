@@ -38,6 +38,7 @@ from PySide6.QtWidgets import QApplication
 from rich.console import Console
 from rich.panel import Panel
 
+from src import __version__
 from src.ai.transcriber import GroqError, GroqTranscriber, TranscriptionResult
 from src.audio.recorder import AudioRecorder
 from src.config_manager import config_manager
@@ -197,7 +198,7 @@ def print_startup_banner() -> None:
 
     console.print(
         Panel.fit(
-            "[bold cyan]Wispr Clone — Ditado com IA (Fase 1 Concluída)[/bold cyan]\n\n"
+            f"[bold cyan]Wispr Clone v{__version__} — Ditado com IA (Fase 1 Concluída)[/bold cyan]\n\n"
             f"• [bold]Atalho Ativo:[/bold] [yellow]{hotkey}[/yellow] (Push-to-Talk)\n"
             f"• [bold]Idioma Padrão:[/bold] [white]{lang}[/white]\n"
             f"• [bold]Modelo IA:[/bold] [white]{model}[/white]\n"

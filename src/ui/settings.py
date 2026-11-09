@@ -31,6 +31,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from src import __version__
 from src.config_manager import config_manager
 
 # Estilo QSS Moderno (Dark Mode minimalista)
@@ -240,7 +241,7 @@ class SettingsWindow(QDialog):
 
     def __init__(self, parent: Optional[QDialog] = None) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Wispr Clone — Configurações")
+        self.setWindowTitle(f"Wispr Clone v{__version__} — Configurações")
         self.setFixedSize(460, 420)
         self.setStyleSheet(SETTINGS_STYLE)
 
@@ -403,7 +404,7 @@ class SystemTrayManager(QObject):
 
     def _setup_tray(self) -> None:
         self.tray_icon.setIcon(create_dynamic_tray_icon())
-        self.tray_icon.setToolTip("Wispr Clone — Ditado com IA")
+        self.tray_icon.setToolTip(f"Wispr Clone v{__version__} — Ditado com IA")
 
         # Menu de contexto
         menu = QMenu()
